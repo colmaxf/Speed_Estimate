@@ -1,0 +1,37 @@
+# pip install -r requirements.txt
+
+# base ----------------------------------------
+
+matplotlib
+numpy
+opencv-python
+Pillow
+PyYAML
+requests
+scipy
+#torch>=1.7.0
+#torchvision>=0.8.1
+tqdm
+
+# plotting ------------------------------------
+
+pandas
+seaborn
+
+# deep_sort -----------------------------------
+
+easydict
+
+# torchreid
+
+Cython
+h5py
+six
+tb-nightly
+future
+yacs
+gdown
+flake8
+yapf
+isort==4.3.21
+imageio
