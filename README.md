@@ -97,9 +97,44 @@ python test_speed.py --help
 
 Đầu ra được lưu trong thư mục chạy dưới `runs/track/` theo thiết lập YOLOv5. Có thể dùng `--save-txt` để lưu kết quả tracking dạng văn bản MOT. Tùy chọn hiển thị video phụ thuộc môi trường có hỗ trợ cửa sổ OpenCV hay không.
 
-## Độ chính xác tốc độ
+## Cách tính tốc độ trong mã nguồn
 
-Phần ước tính trong `test_speed.py` hiện là logic thử nghiệm, không phải hiệu chuẩn tổng quát cho mọi camera. Mã có giá trị `ppm` (pixel trên mét) cố định và dùng FPS của video; chất lượng ước tính vì vậy không thể đảm bảo khi đổi camera, độ phân giải, góc nhìn hoặc vùng đo. Cần hiệu chuẩn theo cảnh thực tế và kiểm tra lại công thức/thời gian đo trước khi sử dụng kết quả.
+Phần thử nghiệm trong `test_speed.py` có hai cách tính khác nhau. YOLOv5 phát hiện bounding box, còn DeepSORT giữ ID của đối tượng giữa các frame để có thể so sánh vị trí của cùng một đối tượng.
+
+### 1. Ước tính từ chuyển động giữa hai frame
+
+Hàm `estimateSpeed(location1, location2, ppm, fs)` lấy tâm hai bounding box liên tiếp, tính độ dịch chuyển theo pixel rồi quy đổi qua hệ số `ppm` (pixel trên mét):
+
+```text
+d_pixel = khoảng cách giữa hai tâm bounding box
+d_mét   = d_pixel / ppm
+v_km/h  = d_mét × FPS × 3.6
+```
+
+Trong `test_speed.py`, `ppm` hiện được đặt cố định là `10`, còn `fs` là FPS của video. Giá trị trả về được gán cho biến `speed`, nhưng nhãn tốc độ hiển thị trên bounding box lại dùng `speed1`; vì vậy phép tính theo chuyển động từng frame hiện chưa phải giá trị tốc độ đang được hiển thị. Trong `track.py`, hàm này cũng được gọi với `ppm = 10`.
+
+### 2. Ước tính theo thời gian đi qua hai vị trí
+
+Hàm `estimateSpeed_1(time_1, time_2)` trong `test_speed.py` dùng khoảng cách cố định 35 mét và thời gian giữa hai lần ghi nhận:
+
+```text
+v_km/h = 35 × 3.6 / (time_2 - time_1)
+```
+
+Trong mã hiện tại, biểu thức thực tế viết là `35 * 3.6 / (time_1 - time_2)`. Hàm trả về giá trị này cho `speed1`, là biến được dùng làm nhãn trên bounding box.
+
+Thời điểm đo dự định được lưu trong `TrackableObject.time_test1` và `TrackableObject.time_test2`. Tuy nhiên, điều kiện đặt `time_test2` trong `test_speed.py` hiện có thể không bao giờ đúng: nó yêu cầu tâm box vừa lớn hơn `h - 250`, vừa nhỏ hơn `h - 350`, trong khi `h - 350` nhỏ hơn `h - 250`. Vì vậy, cách tính thứ hai cần được sửa và kiểm thử trước khi tin cậy kết quả.
+
+### Đếm đối tượng qua vùng
+
+`count_obj(...)` trong các script dùng track ID để tránh đếm lặp một đối tượng sau khi nó vượt ngưỡng vị trí trong khung hình. Đây là chức năng đếm lưu lượng, không phải công thức tính tốc độ.
+
+### Lưu ý về độ chính xác
+
+- `ppm = 10` và khoảng cách 35 mét là các giá trị giả định trong mã, không phải hiệu chuẩn tự động. Cần đo/căn chỉnh theo cảnh camera thực tế.
+- Công thức theo frame giả định FPS ổn định và không bù méo phối cảnh; chuyển động hướng sâu vào camera có thể làm sai lệch đáng kể.
+- Cần dùng cùng một track ID, xác định đúng hai vị trí đo và đảm bảo thời gian dương trước khi tính tốc độ.
+- Hãy xác minh kết quả với khoảng cách/tốc độ đã biết. Đây là ước tính thử nghiệm, không thay thế thiết bị đo đã được kiểm định.
 
 ## Lưu ý
 
