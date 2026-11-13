@@ -1,0 +1,26 @@
+{
+    "importPaths": ["."],
+    "files": [
+        "TrafficOps/IconButton.qml",
+        "main.qml",
+        "TrafficOps/BoundingBox.qml",
+        "TrafficOps/KpiCard.qml",
+        "TrafficOps/VideoPanel.qml",
+        "TrafficOps/qmldir",
+        "TrafficOps/TrafficChart.qml",
+        "TrafficOps/HeaderBar.qml",
+        "TrafficOps/CornerMask.qml",
+        "TrafficOps/DarkComboBox.qml",
+        "main.py",
+        "TrafficOps/AlertCard.qml",
+        "TrafficOps/AppIcon.qml",
+        "TrafficOps/Theme.qml",
+        "TrafficOps/AlertPanel.qml",
+        "TrafficOps/TelemetryPanel.qml",
+        "backend.py",
+        "icon_provider.py",
+        "models.py",
+        "README.md",
+        "requirements.txt"
+    ]
+}

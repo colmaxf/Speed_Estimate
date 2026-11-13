@@ -1,0 +1,14 @@
+module TrafficOps
+singleton Theme Theme.qml
+AppIcon AppIcon.qml
+IconButton IconButton.qml
+DarkComboBox DarkComboBox.qml
+BoundingBox BoundingBox.qml
+CornerMask CornerMask.qml
+VideoPanel VideoPanel.qml
+KpiCard KpiCard.qml
+TrafficChart TrafficChart.qml
+TelemetryPanel TelemetryPanel.qml
+AlertCard AlertCard.qml
+AlertPanel AlertPanel.qml
+HeaderBar HeaderBar.qml
