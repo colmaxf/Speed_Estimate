@@ -25,9 +25,8 @@ Item {
     property real animH: boxH
 
     component Glide: NumberAnimation {
-        duration: 500
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: [0.42, 0, 0.58, 1, 1, 1]
+        duration: 60
+        easing.type: Easing.Linear
     }
     Behavior on animX { Glide {} }
     Behavior on animY { Glide {} }
@@ -94,15 +93,15 @@ Item {
         radius: 4
         opacity: hot ? pulse : 1
         color: hot ? Theme.red600
-             : root.speed > 80 ? Theme.yellow500
+             : root.level === 1 ? Theme.yellow500
              : Theme.alpha(Theme.black, 0.7)
 
         Text {
             id: tagText
             anchors.centerIn: parent
-            text: root.speed + " km/h"
+            text: (root.plate ? root.plate + " · " : "") + root.speed + " km/h"
             color: Theme.white
-            font.pixelSize: 12
+            font.pixelSize: 11
             font.bold: true
         }
 

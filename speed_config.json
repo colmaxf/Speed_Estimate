@@ -1,0 +1,107 @@
+{
+  "_comment": "AI & 4-point Homography calibration config for Nguyen Trai overpass camera (1920x1080 @ 30.02 FPS). Standard JSON uses _comment_* keys for inline documentation.",
+
+  "_comment_source": "Video file path ('videos/real_1.mp4'), RTSP URL ('rtsp://...'), or '0' for webcam",
+  "source": "videos/real_1.mp4",
+
+  "_comment_yolo_weights": "YOLOv5 weights ('yolov5n.pt' for fast real-time FPS, 'yolov5x.pt' for higher accuracy at lower FPS)",
+  "yolo_weights": "yolov5n.pt",
+
+  "_comment_tracker_type": "'fast_sort' = lightweight Kalman+IoU tracker (~30 FPS, skips ReID CNN); 'deepsort' = OSNet ReID appearance matching",
+  "tracker_type": "fast_sort",
+
+  "_comment_filter_roi_before_track": "true = only send detections near/inside ROI (y2 >= roi_top_ratio - 0.05) to the tracker, cutting horizon overhead",
+  "filter_roi_before_track": true,
+
+  "_comment_reid_model": "DeepSORT ReID checkpoint for keeping consistent vehicle track IDs across frames",
+  "reid_model": "deep_sort/deep/checkpoint/osnet_ibn_x1_0_MSMT17.pth",
+
+  "_comment_deepsort_config": "YAML config for DeepSORT matching thresholds (MAX_DIST, MAX_AGE, N_INIT)",
+  "deepsort_config": "deep_sort/configs/deep_sort.yaml",
+
+  "_comment_imgsz": "YOLO inference input size (640 for speed; 1280 detects distant vehicles better but reduces FPS)",
+  "imgsz": 640,
+
+  "_comment_conf_thres": "Minimum confidence threshold to keep a detection (0.0 - 1.0)",
+  "conf_thres": 0.35,
+
+  "_comment_iou_thres": "NMS IoU threshold to suppress overlapping bounding boxes (0.0 - 1.0)",
+  "iou_thres": 0.50,
+
+  "_comment_classes": "COCO class IDs to detect: 2 = car, 3 = motorcycle, 5 = bus, 7 = truck",
+  "classes": [2, 3, 5, 7],
+
+  "_comment_loop_video": "true = loop video playback at EOF; false = stop when video ends",
+  "loop_video": true,
+
+  "_comment_realtime_pace": "true = match original video FPS; false = run as fast as GPU allows",
+  "realtime_pace": true,
+
+  "speed_estimation": {
+    "_comment_calibration_mode": "'homography' = 4-point perspective road mapping (recommended); 'linear' = fixed m/px scale",
+    "calibration_mode": "homography",
+
+    "_comment_roi_top_ratio": "Top boundary of valid measurement ROI as fraction of frame height (0.37 ~ y=400px on 1080p, excluding high-distortion far field)",
+    "roi_top_ratio": 0.37,
+
+    "_comment_roi_bottom_ratio": "Bottom boundary of valid measurement ROI as fraction of frame height (0.96 ~ y=1037px on 1080p)",
+    "roi_bottom_ratio": 0.96,
+
+    "_comment_counting_line_y_ratio": "Virtual line for vehicle flow counting (fraction of frame height, between roi_top_ratio and roi_bottom_ratio)",
+    "counting_line_y_ratio": 0.75,
+
+    "_comment_sliding_window_frames": "Sliding window length in frames for speed estimation (15 frames ~ 0.5s at 30 FPS to smooth out jitter)",
+    "sliding_window_frames": 15,
+
+    "_comment_min_history_frames": "Minimum frames inside ROI before reporting speed (prevents initial spawn spikes)",
+    "min_history_frames": 5,
+
+    "_comment_min_displacement_px": "Minimum pixel movement across the sliding window; below this is treated as stationary (0 km/h)",
+    "min_displacement_px": 6.0,
+
+    "_comment_min_time_delta_s": "Minimum elapsed seconds required for valid speed calculation (prevents division-by-zero spikes)",
+    "min_time_delta_s": 0.15,
+
+    "_comment_distance_meters": "Fallback real-world span in meters when calibration_mode = 'linear' and calibration_scale_m_per_px is null",
+    "distance_meters": 10.0,
+
+    "_comment_calibration_scale_m_per_px": "Fixed meters-per-pixel scale for 'linear' mode (null auto-computes from distance_meters)",
+    "calibration_scale_m_per_px": null,
+
+    "_comment_speed_limit_kmh": "Posted road speed limit (km/h) displayed in KPIs and violation alerts",
+    "speed_limit_kmh": 60,
+
+    "_comment_warn_speed_kmh": "Speed threshold (km/h) that turns the bounding box yellow",
+    "warn_speed_kmh": 65,
+
+    "_comment_alert_speed_kmh": "Speed threshold (km/h) that turns the bounding box red and logs a Live Violation alert",
+    "alert_speed_kmh": 75,
+
+    "_comment_smoothing_alpha": "EMA smoothing factor (0.01 - 1.0): lower = smoother readout; 1.0 = raw sliding-window value",
+    "smoothing_alpha": 0.35,
+
+    "_comment_max_speed_kmh": "Upper plausibility cap (km/h) to reject outliers from ID switches or bbox jumps",
+    "max_speed_kmh": 180.0,
+
+    "_comment_stale_ttl_frames": "Frames to retain a track_id state after disappearance before cleanup",
+    "stale_ttl_frames": 90,
+
+    "homography": {
+      "_comment_src_norm_points": "4 normalized image anchor points [x/W, y/H] ordered [P1 top-left, P2 top-right, P3 bottom-right, P4 bottom-left] aligned to road markings L1 & L3",
+      "src_norm_points": [
+        [0.344, 0.530],
+        [0.605, 0.528],
+        [0.696, 0.963],
+        [0.223, 0.963]
+      ],
+
+      "_comment_dst_meter_points": "Corresponding real-world road coordinates in meters [X, Y]: 2 lanes wide = 7.0m, length (dash 2 + gap + dash 1) = 10.0m",
+      "dst_meter_points": [
+        [0.0, 0.0],
+        [7.0, 0.0],
+        [7.0, 10.0],
+        [0.0, 10.0]
+      ]
+    }
+  }
+}

@@ -64,17 +64,31 @@ class VehicleModel(QAbstractListModel):
 
     countChanged = Signal()
 
-    def __init__(self, rng: random.Random, parent=None):
+    def __init__(
+        self,
+        rng: random.Random,
+        parent=None,
+        seed_mock: bool = True,
+        warn_speed: float = WARN_SPEED,
+        alert_speed: float = ALERT_SPEED,
+    ):
         super().__init__(parent)
         self._rng = rng
         self._items: list[Vehicle] = []
         self._next_id = 1
-        for x, y, w, h, speed, plate in _INITIAL:
-            v = Vehicle(self._new_id(), x, y, w, h, speed, plate)
-            v.alert_active = v.level == 2  # already speeding at start-up: no duplicate alert
-            self._items.append(v)
+        self._warn_speed = float(warn_speed)
+        self._alert_speed = float(alert_speed)
+        if seed_mock:
+            for x, y, w, h, speed, plate in _INITIAL:
+                v = Vehicle(self._new_id(), x, y, w, h, speed, plate)
+                v.alert_active = v.speed > self._alert_speed
+                self._items.append(v)
         self.rowsInserted.connect(lambda *_: self.countChanged.emit())
         self.rowsRemoved.connect(lambda *_: self.countChanged.emit())
+
+    def set_thresholds(self, warn_speed: float, alert_speed: float) -> None:
+        self._warn_speed = float(warn_speed)
+        self._alert_speed = float(alert_speed)
 
     # -- QAbstractListModel ------------------------------------------------- #
     def rowCount(self, parent=QModelIndex()):
@@ -97,7 +111,11 @@ class VehicleModel(QAbstractListModel):
         if role == self.Plate:
             return v.plate
         if role == self.Level:
-            return v.level
+            if v.speed > self._alert_speed:
+                return 2
+            if v.speed > self._warn_speed:
+                return 1
+            return 0
         return None
 
     def roleNames(self):
@@ -139,6 +157,87 @@ class VehicleModel(QAbstractListModel):
             i += 1
         if self._items:
             self.dataChanged.emit(self.index(0), self.index(len(self._items) - 1))
+        return newly_speeding
+
+    def clear(self) -> None:
+        """Remove all tracked vehicles from the model."""
+        if not self._items:
+            return
+        self.beginResetModel()
+        self._items.clear()
+        self.endResetModel()
+
+    def sync_tracks(
+        self,
+        tracked: list,
+        alert_speed: float = ALERT_SPEED,
+    ) -> list[Vehicle]:
+        """Synchronize model rows with live tracker detections by `track_id`.
+
+        Returns vehicles that just crossed `alert_speed` on this frame.
+        """
+        incoming_by_vid = {str(t.track_id): t for t in tracked}
+        newly_speeding: list[Vehicle] = []
+
+        # 1. Remove tracks no longer present
+        idx = 0
+        while idx < len(self._items):
+            if self._items[idx].vid not in incoming_by_vid:
+                self.beginRemoveRows(QModelIndex(), idx, idx)
+                self._items.pop(idx)
+                self.endRemoveRows()
+            else:
+                idx += 1
+
+        # 2. Update existing tracks in-place
+        existing_map = {v.vid: row for row, v in enumerate(self._items)}
+        updated_rows: list[int] = []
+        for vid, t in incoming_by_vid.items():
+            row = existing_map.get(vid)
+            label = f"#{t.track_id} {t.class_name.upper()}"
+            if row is not None:
+                v = self._items[row]
+                v.x = t.x_pct
+                v.y = t.y_pct
+                v.w = t.w_pct
+                v.h = t.h_pct
+                v.speed = t.speed_kmh
+                v.plate = label
+                speeding = v.speed > alert_speed
+                if speeding and not v.alert_active:
+                    newly_speeding.append(v)
+                v.alert_active = speeding
+                updated_rows.append(row)
+
+        if updated_rows:
+            self.dataChanged.emit(
+                self.index(min(updated_rows)),
+                self.index(max(updated_rows)),
+            )
+
+        # 3. Insert newly appeared tracks
+        to_insert = [t for vid, t in incoming_by_vid.items() if vid not in existing_map]
+        if to_insert:
+            start = len(self._items)
+            end = start + len(to_insert) - 1
+            self.beginInsertRows(QModelIndex(), start, end)
+            for t in to_insert:
+                speeding = t.speed_kmh > alert_speed
+                v = Vehicle(
+                    vid=str(t.track_id),
+                    x=t.x_pct,
+                    y=t.y_pct,
+                    w=t.w_pct,
+                    h=t.h_pct,
+                    speed=t.speed_kmh,
+                    plate=f"#{t.track_id} {t.class_name.upper()}",
+                    alert_active=speeding,
+                )
+                self._items.append(v)
+                if speeding:
+                    newly_speeding.append(v)
+            self.endInsertRows()
+
         return newly_speeding
 
     def _new_id(self) -> str:

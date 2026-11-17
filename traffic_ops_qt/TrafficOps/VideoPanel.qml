@@ -1,8 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
+import QtMultimedia
 
-// Camera feed card: simulated road, tracked vehicles, header overlay and OSD footer.
+// Camera feed card: live AI VideoOutput (or simulated road), tracked vehicles, header overlay and OSD footer.
 Item {
     id: root
 
@@ -97,16 +98,80 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            text: "NO SIGNAL / SIMULATED FEED"
-            color: Theme.alpha(Theme.slate500, 0.5)
+            visible: !root.backend.feedActive
+            text: root.backend.feedStatus === "LOADING" ? "LOADING AI MODEL..." : "NO SIGNAL / SIMULATED FEED"
+            color: Theme.alpha(Theme.slate500, 0.7)
             font.family: Theme.mono
             font.pixelSize: 20
+        }
+
+        // Live video stream pushed from Python QVideoSink
+        VideoOutput {
+            id: videoOut
+            anchors.fill: parent
+            fillMode: VideoOutput.PreserveAspectFit
+            visible: root.backend.feedActive
+            Component.onCompleted: root.backend.setVideoSink(videoOut.videoSink)
         }
 
         // tracked vehicles (Repeater delegates use `parent` = this Item for % geometry)
         Item {
             id: scene
-            anchors.fill: parent
+            readonly property bool hasRect: root.backend.feedActive && videoOut.contentRect.width > 0
+            x: hasRect ? videoOut.contentRect.x : 0
+            y: hasRect ? videoOut.contentRect.y : 0
+            width: hasRect ? videoOut.contentRect.width : parent.width
+            height: hasRect ? videoOut.contentRect.height : parent.height
+
+            // Virtual ROI bounds (top = 37%, bottom = 96%)
+            Rectangle {
+                visible: root.backend.feedActive
+                x: 0
+                y: parent.height * root.backend.line1Ratio
+                width: parent.width
+                height: 2
+                color: Theme.alpha(Theme.yellow400, 0.55)
+            }
+            Rectangle {
+                visible: root.backend.feedActive
+                x: 0
+                y: parent.height * root.backend.line2Ratio
+                width: parent.width
+                height: 2
+                color: Theme.alpha(Theme.green400, 0.55)
+            }
+
+            // Calibrated 4-point Homography lane-marking trapezoid
+            Shape {
+                anchors.fill: parent
+                visible: root.backend.feedActive && root.backend.homographyPoints.length === 4
+                ShapePath {
+                    readonly property var pts: root.backend.homographyPoints
+                    strokeColor: Theme.alpha(Theme.blue400, 0.85)
+                    strokeWidth: 2
+                    strokeStyle: ShapePath.DashLine
+                    dashPattern: [6, 4]
+                    fillColor: Theme.alpha(Theme.blue500, 0.08)
+                    startX: pts.length === 4 ? scene.width * pts[0].x : 0
+                    startY: pts.length === 4 ? scene.height * pts[0].y : 0
+                    PathLine {
+                        x: pts.length === 4 ? scene.width * pts[1].x : 0
+                        y: pts.length === 4 ? scene.height * pts[1].y : 0
+                    }
+                    PathLine {
+                        x: pts.length === 4 ? scene.width * pts[2].x : 0
+                        y: pts.length === 4 ? scene.height * pts[2].y : 0
+                    }
+                    PathLine {
+                        x: pts.length === 4 ? scene.width * pts[3].x : 0
+                        y: pts.length === 4 ? scene.height * pts[3].y : 0
+                    }
+                    PathLine {
+                        x: pts.length === 4 ? scene.width * pts[0].x : 0
+                        y: pts.length === 4 ? scene.height * pts[0].y : 0
+                    }
+                }
+            }
 
             Repeater {
                 model: root.backend.vehicles

@@ -19,7 +19,8 @@
         "TrafficOps/TelemetryPanel.qml",
         "backend.py",
         "icon_provider.py",
-        "models.py",
+        "traffic_models.py",
+        "worker.py",
         "README.md",
         "requirements.txt"
     ]

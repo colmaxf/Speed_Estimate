@@ -5,6 +5,8 @@ import os
 import sys
 from pathlib import Path
 
+os.environ.setdefault("MPLBACKEND", "Agg")
+
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
